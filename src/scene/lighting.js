@@ -36,8 +36,8 @@ export async function createEnvironment(renderer, scene, onProgress) {
   }
   pmrem.dispose();
   scene.environment = envTex;
-  scene.environmentIntensity = 0.42;
-  scene.background = new THREE.Color('#050c09');
+  scene.environmentIntensity = 0.55;
+  scene.background = new THREE.Color('#06150f');
   onProgress?.();
   return envTex;
 }
@@ -46,7 +46,7 @@ export function createLighting(scene, quality) {
   const group = new THREE.Group();
   group.name = 'lighting';
 
-  const warm = kelvin(2700);
+  const warm = kelvin(2500);
   const lamp = new THREE.SpotLight(warm, 2400, 80, 0.5, 0.75, 2);
   lamp.position.set(-2.5, 34, 7);
   lamp.target.position.set(0, 0, 0.5);
@@ -62,7 +62,7 @@ export function createLighting(scene, quality) {
   group.add(lamp, lamp.target);
 
   // lumière d'appoint très faible, froide, venant de la pièce
-  const hemi = new THREE.HemisphereLight(0x8fa7a0, 0x1a120a, 0.12);
+  const hemi = new THREE.HemisphereLight(0x9bbfae, 0x2a1608, 0.16);
   group.add(hemi);
 
   scene.add(group);

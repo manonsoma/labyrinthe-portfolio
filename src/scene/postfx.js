@@ -5,7 +5,7 @@ export class PostFX {
   constructor(renderer, scene, camera) {
     this.renderer = renderer; this.scene = scene; this.camera = camera;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = 1.1;
   }
   setQuality() {}
   setSize() {}
