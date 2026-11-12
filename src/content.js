@@ -18,7 +18,7 @@ export const content = {
     overline: "Portfolio interactif",
     title: "Le Labyrinthe",
     text: "Six coffrets sont cachés au fond des fausses pistes. Chacun renferme une question, et ma réponse. Un seul chemin mène à la grille d'or.",
-    button: "Entrer dans le jeu",
+    button: "Découvrir mon univers",
     skipLink: "Pas le temps de jouer ? Voir directement mon parcours →",
     controls: "Flèches, ZQSD ou WASD pour avancer · clic sur une case alignée · glisser pour tourner la vue",
   },

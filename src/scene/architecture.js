@@ -257,7 +257,7 @@ const pillarGeos = () => (PILLAR_GEOS ||= {
   shaft: squareLathe(PILLAR_PARTS.shaft),
   capital: squareLathe(PILLAR_PARTS.capital),
   abacus: squareLathe(PILLAR_PARTS.abacus),
-  finial: roundLathe([[0, 0], [0.13, 0], [0.13, 0.018], ...cubic([0.12, 0.022], [0.06, 0.03], [0.05, 0.06], [0.05, 0.075], 8), ...arc(0.05, 0.085, 0.012, -Math.PI / 2, Math.PI / 2, 3), [0.04, 0.1], ...arc(0, 0.2, 0.105, -Math.PI / 2 + 0.38, Math.PI / 2 - 0.12, 10), [0.008, 0.31], [0, 0.335]], 24),
+  finial: roundLathe([[0, 0], [0.13, 0], [0.13, 0.018], ...cubic([0.12, 0.022], [0.06, 0.03], [0.05, 0.06], [0.05, 0.075], 8), ...arc(0.05, 0.085, 0.012, -Math.PI / 2, Math.PI / 2, 3), [0.04, 0.1], ...arc(0, 0.2, 0.105, -Math.PI / 2 + 0.38, Math.PI / 2 - 0.12, 10), [0.008, 0.31], [0, 0.335]], 16),
 });
 
 function addPillar(B, x, z, repeat, ball) {
@@ -313,7 +313,7 @@ function rosetteGeometry() {
   const ring = new THREE.Shape(); ring.absarc(0, 0, 0.3, 0, Math.PI * 2, false);
   const rh = new THREE.Path(); rh.absarc(0, 0, 0.285, 0, Math.PI * 2, true); ring.holes.push(rh);
   const dot = new THREE.Shape(); dot.absarc(0, 0, 0.03, 0, Math.PI * 2, false);
-  const opt = { depth: 0.004, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.003, bevelSegments: 1, curveSegments: 48 };
+  const opt = { depth: 0.004, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.003, bevelSegments: 1, curveSegments: 20 };
   const g = mergeGeometries([star, ring, dot].map((sh) => new THREE.ExtrudeGeometry(sh, opt)), false);
   g.rotateX(-Math.PI / 2);
   return g;

@@ -5,8 +5,9 @@
 
 export const CELLS = 13;
 export const SIZE = CELLS * 2 + 1; // 27
-export const SEED = 790;            // ne pas changer : le labyrinthe resterait différent
+export const SEED = 225;            // ne pas changer : le labyrinthe resterait différent
 export const COFFRET_COUNT = 6;
+export const COFFRET_DEPTH = [3, 10]; // longueur des impasses à coffret (en cases depuis le bon chemin)
 
 export const START = { x: 1, y: 1 };                 // en haut à gauche
 export const EXIT = { x: SIZE - 2, y: SIZE - 2 };    // en bas à droite
@@ -52,6 +53,39 @@ function carve(rand) {
   return grid;
 }
 
+/**
+ * Variante « Prim » : arbre couvrant aussi (un seul chemin, aucune boucle), mais beaucoup
+ * de petites ramifications → nombreuses fausses pistes courtes, chemin principal plus direct.
+ */
+function carvePrim(rand) {
+  const grid = Array.from({ length: SIZE }, () => new Uint8Array(SIZE).fill(1));
+  const inMaze = (x, y) => grid[y][x] === 0;
+  const frontier = [];
+  const addFrontier = (x, y) => {
+    for (const d of DIRS) {
+      const nx = x + d.x * 2, ny = y + d.y * 2;
+      if (nx > 0 && ny > 0 && nx < SIZE - 1 && ny < SIZE - 1 && !inMaze(nx, ny)) frontier.push([nx, ny]);
+    }
+  };
+  grid[START.y][START.x] = 0;
+  addFrontier(START.x, START.y);
+  while (frontier.length) {
+    const i = Math.floor(rand() * frontier.length);
+    const [cx, cy] = frontier[i];
+    frontier[i] = frontier[frontier.length - 1]; frontier.pop();
+    if (inMaze(cx, cy)) continue;
+    const links = DIRS.filter((d) => {
+      const nx = cx + d.x * 2, ny = cy + d.y * 2;
+      return nx > 0 && ny > 0 && nx < SIZE - 1 && ny < SIZE - 1 && inMaze(nx, ny);
+    });
+    const d = links[Math.floor(rand() * links.length)];
+    grid[cy][cx] = 0;
+    grid[cy + d.y][cx + d.x] = 0;
+    addFrontier(cx, cy);
+  }
+  return grid;
+}
+
 function bfs(grid, from) {
   const dist = new Int32Array(SIZE * SIZE).fill(-1);
   const prev = new Int32Array(SIZE * SIZE).fill(-1);
@@ -82,7 +116,7 @@ function openNeighbours(grid, x, y) {
 /** Construit le labyrinthe complet et la liste des objets à placer. */
 export function buildMaze(seed = SEED) {
   const rand = mulberry32(seed);
-  const grid = carve(rand);
+  const grid = carvePrim(rand);
   grid[GATE.y][GATE.x] = 0; // ouverture de la grille d'or dans le mur extérieur
 
   // Chemin unique départ → sortie
@@ -119,15 +153,18 @@ export function buildMaze(seed = SEED) {
   }
 
   // 6 coffrets : impasses profondes et bien réparties (sélection gloutonne)
-  const candidates = deadEnds.filter((d) => d.depth >= 6).sort((a, b) => b.depth - a.depth);
-  const pool = candidates.length >= COFFRET_COUNT ? candidates : [...deadEnds].sort((a, b) => b.depth - a.depth);
-  const chosen = [pool[0]];
+  // Coffrets : au fond d'impasses COURTES (3 à 10 pas du bon chemin), faciles à atteindre,
+  // et bien répartis sur tout le plateau (sélection gloutonne par éloignement).
+  let pool = deadEnds.filter((d) => d.depth >= COFFRET_DEPTH[0] && d.depth <= COFFRET_DEPTH[1]);
+  if (pool.length < COFFRET_COUNT) pool = [...deadEnds].sort((a, b) => a.depth - b.depth);
+  const center = (SIZE - 1) / 2;
+  const chosen = [pool.reduce((a, b) => (Math.hypot(b.x - 3, b.y - (SIZE - 4)) < Math.hypot(a.x - 3, a.y - (SIZE - 4)) ? b : a))];
   while (chosen.length < COFFRET_COUNT) {
     let best = null, bestScore = -Infinity;
     for (const c of pool) {
       if (chosen.includes(c)) continue;
       const minD = Math.min(...chosen.map((o) => Math.hypot(o.x - c.x, o.y - c.y)));
-      const score = minD * 1.0 + c.depth * 0.35;
+      const score = minD - Math.abs(c.depth - 5) * 0.4 - Math.hypot(c.x - center, c.y - center) * 0.05;
       if (score > bestScore) { bestScore = score; best = c; }
     }
     chosen.push(best);

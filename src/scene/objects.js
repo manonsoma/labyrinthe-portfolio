@@ -128,8 +128,8 @@ export function createVases(maze, mats) {
   const body = smoothProfile([
     [0, 0], [0.13, 0], [0.15, 0.02], [0.12, 0.05], [0.1, 0.08], [0.16, 0.16], [0.21, 0.27], [0.215, 0.34],
     [0.19, 0.43], [0.13, 0.52], [0.09, 0.57], [0.085, 0.62], [0.11, 0.66], [0.125, 0.68], [0.115, 0.69], [0.07, 0.675], [0.0, 0.66],
-  ], 44);
-  const vaseGeo = lathe(body, 32);
+  ], 30);
+  const vaseGeo = lathe(body, 24);
   const ivory = [], gold = [], nero = [];
   const rand = mulberry32(77);
   for (const v of maze.vases) {
@@ -143,16 +143,16 @@ export function createVases(maze, mats) {
     ivory.push(g);
     // anses en volute et bouton doré
     for (const side of [-1, 1]) {
-      const hdl = new THREE.TorusGeometry(0.065 * s, 0.009, 8, 24, Math.PI * 1.3);
+      const hdl = new THREE.TorusGeometry(0.065 * s, 0.009, 6, 14, Math.PI * 1.3);
       hdl.rotateZ(side > 0 ? -0.75 : Math.PI - 1.4);
       const hx = Math.cos(ry) * side * 0.17 * s, hz = -Math.sin(ry) * side * 0.17 * s;
       const hm = place(hdl, 0, 0, 0, ry);
       hm.translate(x + hx, by + 0.1 + 0.5 * s, z + hz);
       gold.push(hm);
     }
-    gold.push(place(new THREE.SphereGeometry(0.03 * s, 16, 12), x, by + 0.1 + 0.69 * s, z));
+    gold.push(place(new THREE.SphereGeometry(0.03 * s, 10, 8), x, by + 0.1 + 0.69 * s, z));
     for (const [ry0, rr] of [[0.27, 0.218], [0.62, 0.09], [0.66, 0.112]]) {
-      const t = new THREE.TorusGeometry(rr * s, 0.008, 6, 32); t.rotateX(Math.PI / 2);
+      const t = new THREE.TorusGeometry(rr * s, 0.008, 5, 24); t.rotateX(Math.PI / 2);
       gold.push(place(t, x, by + 0.1 + ry0 * s, z));
     }
   }
