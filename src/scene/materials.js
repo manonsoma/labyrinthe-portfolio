@@ -14,6 +14,7 @@ export const TEXTURE_SETS = {
   walnut: { dir: 'walnut', repeat: 6 },         // cadre : acajou verni
   felt: { dir: 'felt', repeat: 3 },             // table : velours émeraude
   velvet: { dir: 'velvet', repeat: 1 },         // intérieur des coffrets
+  hedge: { dir: 'hedge', repeat: 1.6 },         // haies de buis taillées
 };
 const MAPS = ['color', 'normal', 'rough', 'ao'];
 
@@ -62,6 +63,7 @@ export async function createMaterials(renderer, { quality = 'high', onProgress }
     walnut: () => woodTextures({ size: texSize, base: '#5c1b10', dark: '#2c0905', light: '#93401f' }),
     felt: () => feltTextures({ size: 256, base: '#104030' }),
     velvet: () => feltTextures({ size: 128, base: '#4a0c1a', seed: 3 }),
+    hedge: () => feltTextures({ size: 256, base: '#3f7a30', seed: 5 }),
   };
   const tex = {};
   for (const n of names) {
@@ -119,6 +121,24 @@ export async function createMaterials(renderer, { quality = 'high', onProgress }
   });
   m.lacquer = new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#6a1328'), roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.03, bumpMap: grain, bumpScale: 0.002 });
   m.velvet = new THREE.MeshPhysicalMaterial({ map: tex.velvet.color, normalMap: tex.velvet.normal, roughness: 0.9, sheen: 1, sheenRoughness: 0.4, sheenColor: new THREE.Color('#d0506a') });
+  // buis : feuilles cireuses, très légère brillance, relief fort
+  m.hedge = new THREE.MeshPhysicalMaterial({
+    map: tex.hedge.color,
+    normalMap: tex.hedge.normal,
+    normalScale: new THREE.Vector2(1.4, 1.4),
+    roughnessMap: tex.hedge.rough,
+    aoMap: tex.hedge.ao,
+    aoMapIntensity: 0.8,
+    roughness: 1,
+    color: new THREE.Color('#f2f8f0'),
+    sheen: 0.35,
+    sheenRoughness: 0.6,
+    sheenColor: new THREE.Color('#9fd08a'),
+  });
+  // petites feuilles 3D qui dépassent des haies (silhouette moins parfaite)
+  const leafTex = photo.hedge ? await loadTex(`${BASE}textures/hedge/leaf.png`) : null;
+  if (leafTex) leafTex.colorSpace = THREE.SRGBColorSpace;
+  m.leaf = new THREE.MeshStandardMaterial({ map: leafTex, color: leafTex ? 0xffffff : 0x4c8236, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.6 });
   m.glass = new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#fff4dc'), roughness: 0.05, metalness: 0, transparent: true, opacity: 0.28, clearcoat: 1, depthWrite: false });
   m.flame = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffc46b') });
   m.glowInner = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd27a'), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });

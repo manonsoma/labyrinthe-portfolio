@@ -3,9 +3,9 @@
 const KEY = 'labyrinthe-quality';
 
 export const PRESETS = {
-  high: { pixelRatio: 2, shadowMap: 4096, ao: true, aoHalf: false, bloom: true, dof: true, lanternLights: 8, dust: 520, smaa: true },
-  medium: { pixelRatio: 1.5, shadowMap: 2048, ao: true, aoHalf: true, bloom: true, dof: false, lanternLights: 4, dust: 260, smaa: true },
-  low: { pixelRatio: 1, shadowMap: 1024, ao: false, aoHalf: true, bloom: false, dof: false, lanternLights: 0, dust: 0, smaa: false },
+  high: { pixelRatio: 2, shadowMap: 4096, ao: true, aoHalf: false, bloom: true, dof: true, lanternLights: 8, dust: 520, smaa: true, leaves: 26000 },
+  medium: { pixelRatio: 1.5, shadowMap: 2048, ao: true, aoHalf: true, bloom: true, dof: false, lanternLights: 4, dust: 260, smaa: true, leaves: 9000 },
+  low: { pixelRatio: 1, shadowMap: 1024, ao: false, aoHalf: true, bloom: false, dof: false, lanternLights: 0, dust: 0, smaa: false, leaves: 0 },
 };
 
 export function detectTier() {

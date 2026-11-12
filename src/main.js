@@ -5,7 +5,7 @@ import { content } from './content.js';
 import { buildMaze, cellKey, COFFRET_COUNT } from './maze.js';
 import { createMaterials, TEXTURE_SETS } from './scene/materials.js';
 import { buildArchitecture } from './scene/architecture.js';
-import { createPawn, createCoffret, createVases, createGate, createLanterns, createGoldDust, createSparkles, createDustMotes } from './scene/objects.js';
+import { createPawn, createCoffret, createVases, createGate, createLanterns, createGoldDust, createSparkles, createDustMotes, createHedgeLeaves } from './scene/objects.js';
 import { createEnvironment, createLighting, createLanternLights } from './scene/lighting.js';
 import { PostFX } from './scene/postfx.js';
 import { CameraRig } from './scene/camera.js';
@@ -75,6 +75,8 @@ async function init() {
     return obj;
   });
   scene.add(createVases(maze, mats));
+  const leaves = createHedgeLeaves(arch.hedges, mats, PRESETS.high.leaves);
+  scene.add(leaves);
   const gate = createGate(maze, mats);
   scene.add(gate);
   const lanterns = createLanterns(arch.pillarTops, mats);
@@ -290,6 +292,8 @@ async function init() {
     lanternLights.setCount(preset.lanternLights);
     motes.points.geometry.setDrawRange(0, preset.dust);
     motes.points.visible = preset.dust > 0;
+    leaves.count = preset.leaves;
+    leaves.visible = preset.leaves > 0;
     postfx.setQuality(preset);
     resize();
   }

@@ -341,3 +341,52 @@ export function createDustMotes(count, center, radius, height) {
     },
   };
 }
+
+// ─── Feuilles de buis qui dépassent des haies ──────────────
+export function createHedgeLeaves(hedges, mats, max = 26000) {
+  const geo = new THREE.PlaneGeometry(0.045, 0.078);
+  geo.translate(0, 0.034, 0); // la base de la feuille est sur la haie
+  const mesh = new THREE.InstancedMesh(geo, mats.m.leaf, max);
+  mesh.receiveShadow = true;
+  mesh.castShadow = false;
+  mesh.frustumCulled = false;
+  mesh.name = 'hedge-leaves';
+  const rand = mulberry32(31);
+  const areas = hedges.map((h) => h.len * h.w + 2 * h.len * h.h);
+  const total = areas.reduce((a, b) => a + b, 0);
+  const cum = []; let acc = 0; for (const a of areas) cum.push((acc += a) / total);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), qr = new THREE.Quaternion(), qh = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0), n = new THREE.Vector3(), t = new THREE.Vector3(), dir = new THREE.Vector3();
+  const p = new THREE.Vector3(), s = new THREE.Vector3(), col = new THREE.Color();
+  for (let i = 0; i < max; i++) {
+    const r = rand();
+    let hi = cum.findIndex((c) => c >= r); if (hi < 0) hi = hedges.length - 1;
+    const h = hedges[hi];
+    const top = rand() < (h.len * h.w) / areas[hi];
+    const u = (rand() - 0.5) * h.len;
+    if (top) {
+      p.set(u, h.h / 2 + 0.004, (rand() - 0.5) * h.w);
+      n.set(0, 1, 0); t.set(rand() - 0.5, 0, rand() - 0.5);
+    } else {
+      const side = rand() < 0.5 ? 1 : -1;
+      p.set(u, (Math.pow(rand(), 0.7) - 0.5) * h.h, side * (h.w / 2 + 0.004));
+      n.set(0, 0, side); t.set(rand() - 0.5, rand() - 0.2, 0);
+    }
+    dir.copy(n).addScaledVector(t.normalize(), 0.6 + rand() * 0.9).normalize();
+    q.setFromUnitVectors(up, dir);
+    qr.setFromAxisAngle(up, rand() * Math.PI * 2);
+    q.multiply(qr);
+    qh.setFromAxisAngle(up, h.ry);
+    q.premultiply(qh);
+    p.applyQuaternion(qh).add(new THREE.Vector3(h.x, h.y0 + h.h / 2, h.z));
+    const k = 0.75 + rand() * 0.6;
+    s.set(k, k, k);
+    m4.compose(p, q, s);
+    mesh.setMatrixAt(i, m4);
+    col.setHSL(0.36 + rand() * 0.04, 0.35 + rand() * 0.2, 0.3 + rand() * 0.25);
+    mesh.setColorAt(i, col);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  return mesh;
+}

@@ -10,6 +10,7 @@ Toutes les ressources sont sous licence **CC0** (domaine public) : utilisation l
 | `walnut/` (cadre) | Poly Haven, dark_wood | teinte acajou |
 | `felt/` (table) | Poly Haven, velour_velvet | recoloré émeraude |
 | `velvet/` (coffrets) | Poly Haven, velour_velvet | recoloré bordeaux |
+| `hedge/` (haies) | texture générée pour le projet | feuilles de buis peintes une à une |
 | `../hdri/fireplace.png` | Poly Haven, Fireplace (1K) | désaturé à 40 %, encodé en PNG logarithmique |
 
 Chaque dossier contient une version 2K (qualité Haute) et une version 1K dans `1k/` (Moyenne / Basse).

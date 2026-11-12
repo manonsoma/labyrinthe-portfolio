@@ -2,7 +2,7 @@
 // Toute la géométrie statique est fusionnée par matériau (peu d'appels de dessin).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32, SIZE } from '../maze.js';
 import { HALF, WALL_H, WALL_T, PILLAR, TILE_TOP, toWorld } from './coords.js';
 
@@ -143,7 +143,8 @@ export function buildArchitecture(maze, mats) {
       } else if (!isWall(x, y)) start = null;
     }
   }
-  for (const s of segments) addWall(B, s, repeat);
+  const hedges = [];
+  for (const s of segments) addWall(B, s, repeat, hedges);
 
   // ── Piliers ──────────────────────────────────────────────
   const lanternSet = new Set(maze.lanterns.map((l) => l.y * SIZE + l.x));
@@ -165,27 +166,70 @@ export function buildArchitecture(maze, mats) {
   // les dalles et la table n'ont pas besoin de projeter d'ombre
   group.traverse((o) => { if (o.name === 'arch-floor' || o.name === 'arch-brass') o.castShadow = false; });
 
-  return { group, pillarTops, segments };
+  return { group, pillarTops, segments, hedges };
 }
 
-function addWall(B, s, repeat) {
+// ── Haies de buis taillées ───────────────────────────────
+const hash3 = (x, y, z) => {
+  const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453;
+  return h - Math.floor(h);
+};
+function vnoise(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const xf = x - xi, yf = y - yi, zf = z - zi;
+  const s = (t) => t * t * (3 - 2 * t);
+  const u = s(xf), v = s(yf), w = s(zf);
+  let r = 0;
+  for (let dz = 0; dz < 2; dz++) for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++)
+    r += hash3(xi + dx, yi + dy, zi + dz) * (dx ? u : 1 - u) * (dy ? v : 1 - v) * (dz ? w : 1 - w);
+  return r;
+}
+
+/** Bloc de haie : boîte subdivisée aux arêtes arrondies, surface légèrement bosselée (coordonnées monde). */
+export function hedgeGeometry(len, h, w, x, y, z, ry, { radius = 0.075, amp = 0.03 } = {}) {
+  const g = new THREE.BoxGeometry(len, h, w, Math.max(2, Math.ceil(len * 9)), 9, 6);
+  const p = g.attributes.position;
+  const ix = len / 2 - radius, iy = h / 2 - radius, iz = w / 2 - radius;
+  const v = new THREE.Vector3(), q = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    q.set(THREE.MathUtils.clamp(v.x, -ix, ix), THREE.MathUtils.clamp(v.y, -iy, iy), THREE.MathUtils.clamp(v.z, -iz, iz));
+    const d = v.clone().sub(q);
+    if (d.lengthSq() > 1e-10) v.copy(q).addScaledVector(d.normalize(), radius);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  let geo = mergeVertices(g.deleteAttribute('uv').deleteAttribute('normal'));
+  geo.computeVertexNormals();
+  geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(1, 1, 1)));
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const bottom = y - h / 2;
+  for (let i = 0; i < pos.count; i++) {
+    const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+    const k = THREE.MathUtils.smoothstep(py - bottom, 0.0, 0.12); // pied de la haie bien posé
+    const n = (vnoise(px * 1.6, py * 1.6, pz * 1.6) - 0.5) * 1.0 + (vnoise(px * 6, py * 6, pz * 6) - 0.5) * 0.5;
+    const a = amp * n * k;
+    pos.setXYZ(i, px + nor.getX(i) * a, py + nor.getY(i) * a, pz + nor.getZ(i) * a);
+  }
+  geo.computeVertexNormals(); // normales lisses (géométrie indexée)
+  return geo.toNonIndexed();
+}
+
+function addWall(B, s, repeat, hedges) {
   const half = PILLAR / 2 - 0.02;
   const len = s.b - s.a - half * 2;
   const mid = (s.a + s.b) / 2;
   const { x, z } = s.horiz ? toWorld(mid, s.y) : toWorld(s.x, mid);
   const ry = s.horiz ? 0 : Math.PI / 2;
   const y0 = TILE_TOP;
-  // plinthe noire
-  B.add('nero', worldUV(place(rbox(len, 0.13, WALL_T + 0.08, 0.025), x, y0 + 0.065, z, ry), repeat.nero));
+  // plinthe en marbre noir veiné d'or
+  B.add('nero', worldUV(place(rbox(len, 0.13, WALL_T + 0.1, 0.025), x, y0 + 0.065, z, ry), repeat.nero));
   // listel doré au-dessus de la plinthe
-  B.add('goldBrushed', place(rbox(len, 0.022, WALL_T + 0.035, 0.008), x, y0 + 0.14, z, ry));
-  // corps en marbre vert
-  const bodyH = WALL_H - 0.13 - 0.12;
-  B.add('wall', worldUV(place(rbox(len, bodyH, WALL_T, 0.03), x, y0 + 0.13 + bodyH / 2, z, ry), repeat.verde));
-  // bandeau doré
-  B.add('gold', place(rbox(len, 0.03, WALL_T + 0.025, 0.01), x, y0 + WALL_H - 0.135, z, ry));
-  // corniche en saillie
-  B.add('wall', worldUV(place(rbox(len, 0.1, WALL_T + 0.12, 0.035), x, y0 + WALL_H - 0.07, z, ry), repeat.nero));
+  B.add('goldBrushed', place(rbox(len, 0.022, WALL_T + 0.05, 0.008), x, y0 + 0.14, z, ry));
+  // haie de buis taillée
+  const hy0 = y0 + 0.15, hh = WALL_H - 0.15 + 0.02;
+  const g = hedgeGeometry(len + 0.04, hh, WALL_T + 0.04, x, hy0 + hh / 2, z, ry);
+  B.add('hedge', worldUV(g, repeat.hedge));
+  hedges.push({ x, z, ry, len: len + 0.04, h: hh, w: WALL_T + 0.04, y0: hy0 });
 }
 
 function addPillar(B, x, z, repeat, ball) {
