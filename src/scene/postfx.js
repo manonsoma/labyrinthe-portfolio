@@ -22,7 +22,7 @@ export class PostFX {
       ao.configuration.aoRadius = 0.55;
       ao.configuration.distanceFalloff = 0.6;
       ao.configuration.intensity = 3.2;
-      ao.configuration.color = new THREE.Color('#0a1a10');
+      ao.configuration.color = new THREE.Color('#1a120a');
       // NB : le mode demi-résolution de N8AO 2.0 plante avec three r187 → pleine résolution,
       // et moins d'échantillons sur les appareils modestes.
       ao.configuration.halfRes = false;

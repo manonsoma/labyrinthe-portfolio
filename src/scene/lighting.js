@@ -66,7 +66,7 @@ export async function createEnvironment(renderer, scene, onProgress) {
   // l'HDRI (salon au coin du feu, la nuit) ne sert qu'aux reflets : le fond reste sombre
   scene.environmentIntensity = scene.userData.hdri ? 0.6 : 0.55;
   scene.environmentRotation.set(0, 2.1, 0);
-  scene.background = new THREE.Color('#06150f');
+  scene.background = new THREE.Color('#120d08');
   onProgress?.();
   return envTex;
 }
@@ -93,10 +93,10 @@ export function createLighting(scene, quality) {
   group.add(lamp, lamp.target);
 
   // lumière d'appoint très faible, froide, venant de la pièce
-  const hemi = new THREE.HemisphereLight(0xb7cfc2, 0x2a1608, 0.22);
+  const hemi = new THREE.HemisphereLight(0xe0d2bb, 0x2a1608, 0.22);
   group.add(hemi);
   // contre-jour très doux venant de la salle (éclaire les faces des murs tournées vers la caméra)
-  const fill = new THREE.DirectionalLight(0xc9d8e6, 0.35);
+  const fill = new THREE.DirectionalLight(0xe6dccb, 0.35);
   fill.position.set(6, 10, 22);
   group.add(fill);
 

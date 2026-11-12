@@ -5,10 +5,10 @@ Toutes les ressources sont sous licence **CC0** (domaine public) : utilisation l
 | Dossier | Source | Retouche |
 |---|---|---|
 | `calacatta/` (sol) | ambientCG, Marble001 | recoloré ivoire chaud, veines brun doré |
-| `verde/` (murs) | ambientCG, Marble016 | recoloré vert émeraude veiné de blanc |
+| `creme/` (piliers) | ambientCG, Marble016 | recoloré beige crème veiné de blanc |
 | `nero/` (socles) | ambientCG, Marble002 | recoloré noir veiné d'or (type Portoro) |
 | `walnut/` (cadre) | Poly Haven, dark_wood | teinte acajou |
-| `felt/` (table) | Poly Haven, velour_velvet | recoloré émeraude |
+| `felt/` (table) | Poly Haven, velour_velvet | recoloré beige |
 | `velvet/` (coffrets) | Poly Haven, velour_velvet | recoloré bordeaux |
 | `hedge/` (haies) | texture générée pour le projet | feuilles de buis peintes une à une |
 | `../hdri/fireplace.png` | Poly Haven, Fireplace (1K) | désaturé à 40 %, encodé en PNG logarithmique |

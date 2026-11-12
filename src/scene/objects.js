@@ -5,6 +5,7 @@ import { rbox, place, worldUV } from './architecture.js';
 import { PILLAR_TOP_Y } from './architecture.js';
 import { TILE_TOP, toWorld } from './coords.js';
 import { mulberry32 } from '../maze.js';
+import { arc, cubic, roundLathe } from './profiles.js';
 
 const merge = (list) => mergeGeometries(list.map((g) => {
   const n = g.index ? g.toNonIndexed() : g;
@@ -26,15 +27,17 @@ function smoothProfile(points, samples = 160) {
 // ─── Pion ──────────────────────────────────────────────────
 export function createPawn(mats) {
   const { m } = mats;
+  // profil de pion d'échecs de luxe : socle à tores, gorge, fût galbé, collerette, tête sphérique
+  const H = Math.PI / 2;
   const prof = [
-    [0.0, 0.0], [0.27, 0.0], [0.3, 0.012], [0.305, 0.035], [0.29, 0.055], [0.255, 0.07],
-    [0.25, 0.09], [0.265, 0.105], [0.25, 0.125], [0.2, 0.15], [0.16, 0.19],
-    [0.13, 0.25], [0.11, 0.32], [0.095, 0.39], [0.09, 0.44],
-    [0.15, 0.46], [0.165, 0.475], [0.15, 0.49], [0.095, 0.505],
-    [0.11, 0.53], [0.14, 0.57], [0.155, 0.62], [0.15, 0.67], [0.125, 0.715], [0.085, 0.745], [0.04, 0.76], [0.0, 0.765],
+    [0, 0], [0.29, 0], [0.3, 0.008], ...arc(0.288, 0.03, 0.022, -H, H, 10), [0.272, 0.056],
+    ...cubic([0.272, 0.056], [0.25, 0.062], [0.236, 0.07], [0.234, 0.082], 6), ...arc(0.242, 0.092, 0.01, -H, H, 6),
+    [0.226, 0.104], ...cubic([0.226, 0.104], [0.2, 0.15], [0.125, 0.19], [0.112, 0.28], 14), [0.097, 0.39], [0.094, 0.43],
+    ...cubic([0.094, 0.43], [0.13, 0.432], [0.16, 0.438], [0.165, 0.448], 6), ...arc(0.162, 0.457, 0.01, -H * 0.2, H, 6),
+    ...cubic([0.15, 0.467], [0.12, 0.472], [0.095, 0.48], [0.088, 0.5], 6),
+    ...arc(0, 0.615, 0.13, -H + 0.72, H, 28),
   ];
-  const geo = lathe(smoothProfile(prof, 220), 96);
-  geo.computeVertexNormals();
+  const geo = roundLathe(prof, 128);
   const body = new THREE.Mesh(geo, m.goldPolished);
   body.castShadow = true; body.receiveShadow = true;
   // feutrine sous le pion
@@ -73,6 +76,11 @@ export function createCoffret(mats) {
     goldParts.push(place(rbox(0.05, H + 0.005, 0.05, 0.012), sx * (W / 2 - 0.018), y0 + H / 2, sz * (D / 2 - 0.018)));
   goldParts.push(place(rbox(W + 0.01, 0.025, D + 0.01, 0.01), 0, y0 + 0.02, 0));
   goldParts.push(place(rbox(W + 0.012, 0.02, D + 0.012, 0.008), 0, y0 + H - 0.012, 0));
+  // clous dorés le long des bandeaux
+  for (let i = 0; i < 9; i++) {
+    const sx = -W / 2 + 0.06 + (i * (W - 0.12)) / 8;
+    for (const [yy, zz] of [[y0 + 0.02, D / 2 + 0.008], [y0 + 0.02, -D / 2 - 0.008]]) goldParts.push(place(new THREE.SphereGeometry(0.008, 8, 6), sx, yy, zz));
+  }
   // serrure
   goldParts.push(place(rbox(0.1, 0.11, 0.02, 0.01), 0, y0 + H - 0.07, D / 2 + 0.006));
   add(merge(goldParts), m.gold);
@@ -133,6 +141,16 @@ export function createVases(maze, mats) {
     const g = place(vaseGeo, x, by + 0.1, z, ry, s, s, s);
     worldUV(g, repeat.calacatta * 0.6);
     ivory.push(g);
+    // anses en volute et bouton doré
+    for (const side of [-1, 1]) {
+      const hdl = new THREE.TorusGeometry(0.065 * s, 0.009, 8, 24, Math.PI * 1.3);
+      hdl.rotateZ(side > 0 ? -0.75 : Math.PI - 1.4);
+      const hx = Math.cos(ry) * side * 0.17 * s, hz = -Math.sin(ry) * side * 0.17 * s;
+      const hm = place(hdl, 0, 0, 0, ry);
+      hm.translate(x + hx, by + 0.1 + 0.5 * s, z + hz);
+      gold.push(hm);
+    }
+    gold.push(place(new THREE.SphereGeometry(0.03 * s, 16, 12), x, by + 0.1 + 0.69 * s, z));
     for (const [ry0, rr] of [[0.27, 0.218], [0.62, 0.09], [0.66, 0.112]]) {
       const t = new THREE.TorusGeometry(rr * s, 0.008, 8, 48); t.rotateX(Math.PI / 2);
       gold.push(place(t, x, by + 0.1 + ry0 * s, z));
@@ -156,12 +174,29 @@ export function createGate(maze, mats) {
   const add = (geo, mat, parent = root) => { const me = new THREE.Mesh(geo, mat); me.castShadow = true; me.receiveShadow = true; parent.add(me); return me; };
   const span = 1.36, colH = 1.25;
   // colonnes (socle noir, fût cannelé doré)
+  const fluted = (() => {
+    const g = new THREE.CylinderGeometry(0.072, 0.082, colH - 0.12, 96, 12);
+    const pp = g.attributes.position;
+    for (let i = 0; i < pp.count; i++) {
+      const x = pp.getX(i), z = pp.getZ(i), r = Math.hypot(x, z);
+      if (r < 0.01) continue;
+      const k = 1 - 0.07 * Math.pow(Math.abs(Math.sin(Math.atan2(z, x) * 8)), 0.6); // 16 cannelures
+      pp.setX(i, x * k); pp.setZ(i, z * k);
+    }
+    g.computeVertexNormals();
+    return g;
+  })();
+  const colBase = roundLathe([[0, 0], [0.12, 0], ...arc(0.12, 0.022, 0.022, -Math.PI / 2, Math.PI / 2, 8), [0.105, 0.05], ...cubic([0.105, 0.05], [0.09, 0.055], [0.088, 0.07], [0.09, 0.08], 6), ...arc(0.095, 0.09, 0.01, -Math.PI / 2, Math.PI / 2, 6), [0.082, 0.1], [0, 0.1]], 48);
+  const colCap = roundLathe([[0, 0], [0.085, 0], ...arc(0.088, 0.01, 0.01, -Math.PI / 2, Math.PI / 2, 6), [0.078, 0.022], ...cubic([0.078, 0.022], [0.08, 0.06], [0.13, 0.07], [0.14, 0.1], 10), [0.14, 0.12], [0, 0.12]], 48);
+  const flame = roundLathe([[0, 0], [0.05, 0], [0.03, 0.03], ...arc(0, 0.1, 0.07, -Math.PI / 2 + 0.6, 0.2, 10), ...cubic([0.068, 0.114], [0.06, 0.16], [0.02, 0.2], [0, 0.24], 10)], 32);
   for (const sx of [-1, 1]) {
     const cx = sx * span / 2;
     add(worldUV(place(rbox(0.3, 0.14, 0.3, 0.03), cx, TILE_TOP + 0.07, 0), repeat.nero), m.nero);
-    const shaft = add(new THREE.CylinderGeometry(0.075, 0.09, colH, 24), m.goldBrushed); shaft.position.set(cx, TILE_TOP + 0.14 + colH / 2, 0);
-    const cap = add(rbox(0.24, 0.07, 0.24, 0.02), m.gold); cap.position.set(cx, TILE_TOP + 0.14 + colH + 0.035, 0);
-    const orb = add(new THREE.SphereGeometry(0.075, 24, 16), m.goldPolished); orb.position.set(cx, TILE_TOP + 0.14 + colH + 0.15, 0);
+    add(place(colBase, cx, TILE_TOP + 0.14, 0), m.gold);
+    add(place(fluted, cx, TILE_TOP + 0.24 + (colH - 0.12) / 2, 0), m.goldBrushed);
+    add(place(colCap, cx, TILE_TOP + 0.12 + colH, 0), m.gold);
+    add(place(rbox(0.3, 0.035, 0.3, 0.01), cx, TILE_TOP + 0.12 + colH + 0.14, 0), m.gold);
+    add(place(flame, cx, TILE_TOP + 0.12 + colH + 0.155, 0), m.goldPolished);
   }
   // arche
   const archR = span / 2;
@@ -172,6 +207,15 @@ export function createGate(maze, mats) {
   // médaillon
   const med = add(new THREE.CylinderGeometry(0.11, 0.11, 0.03, 32), m.goldPolished);
   med.rotation.x = Math.PI / 2; med.position.set(0, arch.position.y + archR - 0.05, 0);
+  // soleil rayonnant au sommet de l'arche
+  const sun = new THREE.Shape();
+  for (let i = 0; i <= 48; i++) {
+    const a = (i / 48) * Math.PI * 2, r = i % 2 ? 0.07 : (i / 2) % 2 ? 0.15 : 0.2;
+    if (i === 0) sun.moveTo(Math.cos(a) * r, Math.sin(a) * r); else sun.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  const sunG = new THREE.ExtrudeGeometry(sun, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1 });
+  sunG.translate(0, 0, -0.006);
+  const sunM = add(sunG, m.goldPolished); sunM.position.set(0, arch.position.y + archR + 0.02, 0);
 
   // barreaux à pointe de lance (descendent dans le sol à l'ouverture)
   const bars = new THREE.Group();
@@ -365,14 +409,14 @@ export function createHedgeLeaves(hedges, mats, max = 26000) {
     const top = rand() < (h.len * h.w) / areas[hi];
     const u = (rand() - 0.5) * h.len;
     if (top) {
-      p.set(u, h.h / 2 + 0.004, (rand() - 0.5) * h.w);
+      p.set(u, h.h / 2 - 0.004, (rand() - 0.5) * h.w);
       n.set(0, 1, 0); t.set(rand() - 0.5, 0, rand() - 0.5);
     } else {
       const side = rand() < 0.5 ? 1 : -1;
-      p.set(u, (Math.pow(rand(), 0.7) - 0.5) * h.h, side * (h.w / 2 + 0.004));
+      p.set(u, (Math.pow(rand(), 0.7) - 0.5) * h.h, side * (h.w / 2 - 0.004));
       n.set(0, 0, side); t.set(rand() - 0.5, rand() - 0.2, 0);
     }
-    dir.copy(n).addScaledVector(t.normalize(), 0.6 + rand() * 0.9).normalize();
+    dir.copy(n).addScaledVector(t.normalize(), 1.4 + rand() * 1.6).normalize(); // feuilles presque couchées sur la haie
     q.setFromUnitVectors(up, dir);
     qr.setFromAxisAngle(up, rand() * Math.PI * 2);
     q.multiply(qr);
@@ -383,7 +427,7 @@ export function createHedgeLeaves(hedges, mats, max = 26000) {
     s.set(k, k, k);
     m4.compose(p, q, s);
     mesh.setMatrixAt(i, m4);
-    col.setHSL(0.36 + rand() * 0.04, 0.35 + rand() * 0.2, 0.3 + rand() * 0.25);
+    col.setHSL(0.36 + rand() * 0.04, 0.4 + rand() * 0.2, 0.45 + rand() * 0.25);
     mesh.setColorAt(i, col);
   }
   mesh.instanceMatrix.needsUpdate = true;
