@@ -20,6 +20,7 @@ import { createCardModal } from './ui/cards.js';
 import { createNotebook } from './ui/notebook.js';
 import { createFinal } from './ui/final.js';
 import { anyDialog } from './ui/dialog.js';
+import { confirmDialog } from './ui/confirm.js';
 
 document.title = content.site.title;
 const TEST = new URLSearchParams(location.search).has('test');
@@ -190,7 +191,7 @@ async function init() {
     onSound: () => { sound.unlock(); sound.setEnabled(!sound.enabled); hud.setSound(sound.enabled); if (sound.enabled && ambienceWanted) sound.setAmbience(true); },
     onAmbience: (on) => { ambienceWanted = on; sound.unlock(); sound.setAmbience(on); hud.setAmbience(on); },
     onQuality: (q) => setQuality(q, true),
-    onRestart: () => { if (window.confirm(content.messages.restartConfirm)) restart(); },
+    onRestart: async () => { if (await confirmDialog(app, content.messages.restartConfirm, { ok: content.ui.restart })) restart(); },
     onDirDown: (d) => { sound.unlock(); if (rig.mode === 'board') {} game.setHeld(d); },
     onDirUp: (d) => { if (game.held === d) game.setHeld(null); },
     onDirTap: (d) => game.step(d),

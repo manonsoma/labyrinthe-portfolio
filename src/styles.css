@@ -229,3 +229,7 @@ button { font: inherit; color: inherit; }
 /* ordre d'empilement : écran final < carnet < carte */
 #notebook { z-index: 52; }
 #card-modal { z-index: 54; }
+#confirm { z-index: 58; }
+.confirm-box { width: min(28rem, 100%); text-align: center; padding: 2rem 1.6rem 1.8rem; }
+.confirm-box p { font-size: 1.25rem; font-style: italic; margin: 0 0 1.6rem; line-height: 1.45; }
+.confirm-actions { display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap; }
