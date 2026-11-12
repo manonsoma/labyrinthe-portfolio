@@ -41,6 +41,13 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
+// si un shader ne compile pas sur cet appareil, on le note pour basculer sans effets
+let shaderError = false;
+renderer.debug.onShaderError = (gl, program, vs, fs) => {
+  shaderError = true;
+  console.error('Shader refusé par la carte graphique :', gl.getProgramInfoLog(program), gl.getShaderInfoLog(vs), gl.getShaderInfoLog(fs));
+};
+canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); console.warn('Contexte WebGL perdu, rechargement…'); setTimeout(() => location.reload(), 800); });
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 200);
@@ -291,6 +298,9 @@ async function init() {
   });
 
   // ── Qualité ─────────────────────────────────────────────
+  let elapsed = 0;
+  // 3 contrôles seulement après le départ / un changement de qualité (lire des pixels ralentit le GPU)
+  let nextBlackCheck = 2, blackFrames = 0, blackChecks = 0;
   function applyPreset() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, preset.pixelRatio));
     lighting.lamp.shadow.mapSize.set(preset.shadowMap, preset.shadowMap);
@@ -301,6 +311,7 @@ async function init() {
     leaves.count = preset.leaves;
     leaves.visible = preset.leaves > 0;
     postfx.setQuality(preset);
+    blackChecks = 0; nextBlackCheck = elapsed + 2;
     resize();
   }
   function setQuality(choice, persist) {
@@ -339,8 +350,19 @@ async function init() {
   // ── Boucle ──────────────────────────────────────────────
   const timer = new THREE.Timer();
   timer.connect(document);
-  let elapsed = 0;
   const lookTmp = new THREE.Vector3();
+  const px = new Uint8Array(4);
+  const gl = renderer.getContext();
+  // lit quelques pixels juste après le rendu (même image) : tout à 0 = écran noir
+  function isBlackFrame() {
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    let lit = 0;
+    for (const [fx, fy] of [[0.5, 0.5], [0.35, 0.45], [0.65, 0.55], [0.5, 0.3], [0.5, 0.7]]) {
+      gl.readPixels(Math.floor(w * fx), Math.floor(h * fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      if (px[0] + px[1] + px[2] > 6) lit++;
+    }
+    return lit === 0;
+  }
   renderer.setAnimationLoop(() => {
     timer.update();
     const dt = Math.min(timer.getDelta(), TEST ? 0.5 : 1 / 20);
@@ -365,7 +387,19 @@ async function init() {
     if (motes.points.visible && !reducedMotion) motes.update(dt, elapsed);
     lanternLights.update(dt, elapsed, rig.focus);
     if (started) governor.tick(dt);
-    postfx.render(dt);
+    try {
+      postfx.render(dt);
+    } catch (err) {
+      console.error(err);
+      if (!postfx.failed) { postfx.disableEffects(); } else throw err;
+    }
+    // filet de sécurité : image entièrement noire avec les effets → on les coupe
+    if (shaderError && !postfx.failed) { postfx.disableEffects(); hud.toast('Effets visuels désactivés sur cet appareil.'); }
+    if (started && !postfx.failed && postfx.composer && blackChecks < 3 && elapsed > nextBlackCheck) {
+      nextBlackCheck = elapsed + 1.5; blackChecks++;
+      if (isBlackFrame()) { blackFrames++; if (blackFrames >= 2) { console.warn('Image noire détectée : effets désactivés.'); postfx.disableEffects(); hud.toast('Effets visuels désactivés sur cet appareil.'); } }
+      else blackFrames = 0;
+    }
   });
 
   loading.done();
@@ -373,7 +407,7 @@ async function init() {
   if (game.finished && location.hash === '#final') showFinal(true);
 
   // accès pour le débogage dans la console
-  window.__labyrinthe = { game, rig, renderer, scene, setQuality };
+  window.__labyrinthe = { game, rig, renderer, scene, setQuality, postfx };
 }
 
 init().catch((err) => {

@@ -10,6 +10,21 @@ import {
 } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 
+/**
+ * Nettoyage HDR : sur les vraies cartes graphiques (demi-flottants), un reflet extrême peut devenir
+ * « infini » ; le flou de la lueur l'étale alors en NaN sur tout l'écran (écran noir). On borne tout.
+ */
+class SanitizeEffect extends Effect {
+  constructor() {
+    super('SanitizeEffect', /* glsl */ `
+      void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+        vec3 c = inputColor.rgb;
+        if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+        outputColor = vec4(clamp(c, 0.0, 24.0), 1.0);
+      }`);
+  }
+}
+
 /** Étalonnage : ombres légèrement chaudes (brun), hautes lumières dorées. */
 class GradeEffect extends Effect {
   constructor({ shadows = new THREE.Color(1.04, 0.98, 0.9), highlights = new THREE.Color(1.05, 1.0, 0.86), amount = 1, saturation = 1.06 } = {}) {
@@ -50,6 +65,7 @@ export class PostFX {
     const size = renderer.getSize(new THREE.Vector2());
     const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType, multisampling: 0 });
     composer.addPass(new RenderPass(scene, camera));
+    composer.addPass(new EffectPass(camera, new SanitizeEffect()));
 
     if (preset.ao) {
       const ao = new N8AOPostPass(scene, camera, size.x, size.y);
@@ -101,11 +117,17 @@ export class PostFX {
     this.tilt.feather = board ? 0.5 : 0.6;
   }
 
+  /** Repli sans effets (si la carte graphique refuse un shader ou rend une image noire). */
+  disableEffects() {
+    this.failed = true;
+    this.setQuality(this.preset);
+  }
+
   setQuality(preset) {
     this.preset = preset;
     this.composer?.dispose();
     this.composer = null; this.ao = null; this.bloom = null; this.tilt = null;
-    const direct = !preset.ao && !preset.smaa && !preset.bloom;
+    const direct = this.failed || (!preset.ao && !preset.smaa && !preset.bloom);
     this.renderer.toneMapping = direct ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
     this.renderer.toneMappingExposure = this.exposure;
     if (!direct) this.build();
