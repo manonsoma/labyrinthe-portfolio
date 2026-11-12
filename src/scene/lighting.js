@@ -22,10 +22,19 @@ export async function createEnvironment(renderer, scene, onProgress) {
     const r = await fetch(`${BASE}hdri/manifest.json`);
     if (r.ok && (r.headers.get('content-type') || '').includes('json')) {
       const { file } = await r.json();
-      const hdr = await new HDRLoader().loadAsync(`${BASE}hdri/${file}`);
+      const hdr = await new HDRLoader().setDataType(THREE.FloatType).loadAsync(`${BASE}hdri/${file}`);
+      // l'HDRI « coin du feu » est très orangé : on garde 40 % de sa saturation
+      // pour des reflets chaleureux sans teinter tout le plateau.
+      const d = hdr.image.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const l = d[i] * 0.2126 + d[i + 1] * 0.7152 + d[i + 2] * 0.0722;
+        d[i] = l + (d[i] - l) * 0.4; d[i + 1] = l + (d[i + 1] - l) * 0.4; d[i + 2] = l + (d[i + 2] - l) * 0.4;
+      }
+      hdr.needsUpdate = true;
       hdr.mapping = THREE.EquirectangularReflectionMapping;
       envTex = pmrem.fromEquirectangular(hdr).texture;
       hdr.dispose();
+      scene.userData.hdri = true;
     }
   } catch { /* secours : environnement de studio généré */ }
   if (!envTex) {
@@ -36,7 +45,9 @@ export async function createEnvironment(renderer, scene, onProgress) {
   }
   pmrem.dispose();
   scene.environment = envTex;
-  scene.environmentIntensity = 0.55;
+  // l'HDRI (salon au coin du feu, la nuit) ne sert qu'aux reflets : le fond reste sombre
+  scene.environmentIntensity = scene.userData.hdri ? 0.6 : 0.55;
+  scene.environmentRotation.set(0, 2.1, 0);
   scene.background = new THREE.Color('#06150f');
   onProgress?.();
   return envTex;
@@ -46,24 +57,30 @@ export function createLighting(scene, quality) {
   const group = new THREE.Group();
   group.name = 'lighting';
 
-  const warm = kelvin(2500);
-  const lamp = new THREE.SpotLight(warm, 2400, 80, 0.5, 0.75, 2);
-  lamp.position.set(-2.5, 34, 7);
+  const warm = kelvin(2850);
+  const lamp = new THREE.SpotLight(warm, 2600, 80, 0.56, 0.8, 2);
+  // un peu en arrière : le reflet de l'ampoule sur le marbre ne tombe pas dans l'œil de la caméra
+  lamp.position.set(-7, 33, -6);
   lamp.target.position.set(0, 0, 0.5);
   lamp.castShadow = true;
   const sm = quality === 'high' ? 4096 : quality === 'medium' ? 2048 : 1024;
   lamp.shadow.mapSize.set(sm, sm);
-  lamp.shadow.camera.near = 20;
-  lamp.shadow.camera.far = 45;
-  lamp.shadow.bias = -0.00012;
-  lamp.shadow.normalBias = 0.02;
-  lamp.shadow.radius = 4;
-  lamp.shadow.blurSamples = 16;
+  lamp.shadow.camera.near = 18;
+  lamp.shadow.camera.far = 55;
+  // ombres douces (VSM) : flou réglé par radius / blurSamples
+  lamp.shadow.bias = -0.0004;
+  lamp.shadow.normalBias = 0.015;
+  lamp.shadow.radius = quality === 'low' ? 3 : 7;
+  lamp.shadow.blurSamples = quality === 'high' ? 24 : 12;
   group.add(lamp, lamp.target);
 
   // lumière d'appoint très faible, froide, venant de la pièce
-  const hemi = new THREE.HemisphereLight(0x9bbfae, 0x2a1608, 0.16);
+  const hemi = new THREE.HemisphereLight(0xb7cfc2, 0x2a1608, 0.22);
   group.add(hemi);
+  // contre-jour très doux venant de la salle (éclaire les faces des murs tournées vers la caméra)
+  const fill = new THREE.DirectionalLight(0xc9d8e6, 0.35);
+  fill.position.set(6, 10, 22);
+  group.add(fill);
 
   scene.add(group);
   return { group, lamp, hemi, warm };

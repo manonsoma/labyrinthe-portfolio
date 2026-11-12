@@ -40,7 +40,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, preset.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.type = THREE.VSMShadowMap;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 200);
