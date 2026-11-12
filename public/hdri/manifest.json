@@ -1,4 +1,6 @@
 {
-  "file": "fireplace_1k.hdr",
-  "source": "Poly Haven « Fireplace » (CC0)"
+  "file": "fireplace.png",
+  "encoding": "log2",
+  "maxLog2": 10.028,
+  "source": "Poly Haven « Fireplace » (CC0), désaturé à 40 % et encodé en PNG logarithmique"
 }

@@ -2,7 +2,6 @@
 // lanternes (quelques vraies sources de lumière qui suivent le pion, les autres en émissif).
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 
 const BASE = import.meta.env.BASE_URL;
 const kelvin = (k) => {
@@ -15,25 +14,44 @@ const kelvin = (k) => {
   return new THREE.Color().setRGB(c(r), c(g), c(b), THREE.SRGBColorSpace);
 };
 
+/** Charge l'HDRI encodé en PNG logarithmique (x = 2^(v·maxLog2) − 1) → texture flottante. */
+async function loadLogPng(url, maxLog2) {
+  const img = await new THREE.ImageLoader().loadAsync(url);
+  const w = img.width, h = img.height;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const src = ctx.getImageData(0, 0, w, h).data;
+  // demi-flottants : filtrage linéaire garanti partout (iPhone compris)
+  const lut = new Uint16Array(256);
+  for (let i = 0; i < 256; i++) lut[i] = THREE.DataUtils.toHalfFloat(Math.pow(2, (i / 255) * maxLog2) - 1);
+  const one = THREE.DataUtils.toHalfFloat(1);
+  const data = new Uint16Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const sy = h - 1 - y; // la première ligne d'une DataTexture est en bas
+    for (let x = 0; x < w; x++) {
+      const si = (sy * w + x) * 4, di = (y * w + x) * 4;
+      data[di] = lut[src[si]]; data[di + 1] = lut[src[si + 1]]; data[di + 2] = lut[src[si + 2]]; data[di + 3] = one;
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat, THREE.HalfFloatType);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.LinearSRGBColorSpace;
+  tex.minFilter = tex.magFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export async function createEnvironment(renderer, scene, onProgress) {
   const pmrem = new THREE.PMREMGenerator(renderer);
   let envTex = null;
   try {
     const r = await fetch(`${BASE}hdri/manifest.json`);
     if (r.ok && (r.headers.get('content-type') || '').includes('json')) {
-      const { file } = await r.json();
-      const hdr = await new HDRLoader().setDataType(THREE.FloatType).loadAsync(`${BASE}hdri/${file}`);
-      // l'HDRI « coin du feu » est très orangé : on garde 40 % de sa saturation
-      // pour des reflets chaleureux sans teinter tout le plateau.
-      const d = hdr.image.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const l = d[i] * 0.2126 + d[i + 1] * 0.7152 + d[i + 2] * 0.0722;
-        d[i] = l + (d[i] - l) * 0.4; d[i + 1] = l + (d[i + 1] - l) * 0.4; d[i + 2] = l + (d[i + 2] - l) * 0.4;
-      }
-      hdr.needsUpdate = true;
-      hdr.mapping = THREE.EquirectangularReflectionMapping;
-      envTex = pmrem.fromEquirectangular(hdr).texture;
-      hdr.dispose();
+      const man = await r.json();
+      const equi = await loadLogPng(`${BASE}hdri/${man.file}`, man.maxLog2);
+      envTex = pmrem.fromEquirectangular(equi).texture;
+      equi.dispose();
       scene.userData.hdri = true;
     }
   } catch { /* secours : environnement de studio généré */ }
