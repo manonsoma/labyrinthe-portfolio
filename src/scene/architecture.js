@@ -96,7 +96,7 @@ export function buildArchitecture(maze, mats) {
 
   // ── Dalles de marbre (chacune tirée d'une zone différente, tournée au hasard) ──
   const tileTex = repeat.calacatta;
-  const tileProto = rbox(0.965, 0.1, 0.965, 0.025, 2);
+  const tileProto = rbox(0.965, 0.1, 0.965, 0.025, 1); // biseau simple : 729 dalles
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const { x: wx, z: wz } = toWorld(x, y);
@@ -186,7 +186,7 @@ function vnoise(x, y, z) {
  * Les UV viennent de la face d'origine (avant arrondi) : la texture de feuilles ne s'étire pas sur les arêtes.
  */
 export function hedgeGeometry(len, h, w, x, y, z, ry, repeat, { radius = 0.06, amp = 0.03 } = {}) {
-  const g = new THREE.BoxGeometry(len, h, w, Math.max(2, Math.ceil(len * 9)), 9, 6).toNonIndexed();
+  const g = new THREE.BoxGeometry(len, h, w, Math.max(2, Math.ceil(len * 6)), 6, 4).toNonIndexed();
   const p = g.attributes.position, n0 = g.attributes.normal;
   const along = ry === 0 ? x : z; // continuité des feuilles d'un tronçon à l'autre
   const uv = new Float32Array(p.count * 2);
@@ -257,7 +257,7 @@ const pillarGeos = () => (PILLAR_GEOS ||= {
   shaft: squareLathe(PILLAR_PARTS.shaft),
   capital: squareLathe(PILLAR_PARTS.capital),
   abacus: squareLathe(PILLAR_PARTS.abacus),
-  finial: roundLathe([[0, 0], [0.13, 0], [0.13, 0.018], ...cubic([0.12, 0.022], [0.06, 0.03], [0.05, 0.06], [0.05, 0.075], 8), ...arc(0.05, 0.085, 0.012, -Math.PI / 2, Math.PI / 2, 5), [0.04, 0.1], ...arc(0, 0.2, 0.105, -Math.PI / 2 + 0.38, Math.PI / 2 - 0.12, 18), [0.008, 0.31], [0, 0.335]], 40),
+  finial: roundLathe([[0, 0], [0.13, 0], [0.13, 0.018], ...cubic([0.12, 0.022], [0.06, 0.03], [0.05, 0.06], [0.05, 0.075], 8), ...arc(0.05, 0.085, 0.012, -Math.PI / 2, Math.PI / 2, 3), [0.04, 0.1], ...arc(0, 0.2, 0.105, -Math.PI / 2 + 0.38, Math.PI / 2 - 0.12, 10), [0.008, 0.31], [0, 0.335]], 24),
 });
 
 function addPillar(B, x, z, repeat, ball) {

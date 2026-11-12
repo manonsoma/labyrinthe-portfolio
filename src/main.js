@@ -10,7 +10,7 @@ import { createEnvironment, createLighting, createLanternLights } from './scene/
 import { PostFX } from './scene/postfx.js';
 import { CameraRig } from './scene/camera.js';
 import { toWorld, toGrid, TILE_TOP } from './scene/coords.js';
-import { Game } from './game.js';
+import { Game, DIRS } from './game.js';
 import { Sound } from './audio.js';
 import { PRESETS, detectTier, readChoice, writeChoice, FpsGovernor } from './quality.js';
 import { createLoading } from './ui/loading.js';
@@ -112,12 +112,28 @@ async function init() {
     onStep(cell, isNew) {
       dust.add(cell.x, cell.y);
       sound.clack(isNew ? 1 : 0.8);
+      announceSoon();
     },
     onGateLocked(found) { hud.toast(content.messages.gateLocked(found, COFFRET_COUNT)); },
     onDeadEnd(i) { hud.toast(content.messages.deadEnds[i] || content.messages.deadEnds[0]); },
     onCoffret(cf, order, gateNowOpen) { openCoffret(cf, order, gateNowOpen); },
     onExit() { game.paused = true; showFinal(true); },
   });
+
+  // Lecteur d'écran : quand le pion s'arrête, on annonce les passages ouverts.
+  const live = document.createElement('div');
+  live.className = 'sr-only'; live.setAttribute('aria-live', 'polite'); live.setAttribute('role', 'status');
+  document.body.appendChild(live);
+  let announceTimer = 0;
+  const DIR_FR = { up: 'haut', right: 'droite', down: 'bas', left: 'gauche' };
+  function announceSoon() {
+    clearTimeout(announceTimer);
+    announceTimer = setTimeout(() => {
+      if (game.anim) return announceSoon();
+      const open = Object.entries(DIRS).filter(([, d]) => game.isOpen(game.pos.x + d.x, game.pos.y + d.y)).map(([k]) => DIR_FR[k]);
+      live.textContent = `Passages ouverts : ${open.join(', ')}.`;
+    }, 700);
+  }
 
   function applyStateToScene(instant = true) {
     dust.clear();
@@ -377,7 +393,7 @@ async function init() {
     }
     // avant le début : lent survol du plateau
     if (!started) {
-      rig.cur.azimuth = -0.5 + Math.sin(elapsed * 0.08) * 0.35;
+      rig.cur.azimuth = -0.5 + (reducedMotion ? 0 : Math.sin(elapsed * 0.08) * 0.35);
       rig.camera.position.set(Math.sin(rig.cur.azimuth) * Math.sin(rig.cur.polar) * rig.cur.radius, Math.cos(rig.cur.polar) * rig.cur.radius, Math.cos(rig.cur.azimuth) * Math.sin(rig.cur.polar) * rig.cur.radius);
       camera.lookAt(0, 0, 0);
     } else {

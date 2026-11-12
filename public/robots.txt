@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://manonsoma.github.io/labyrinthe-portfolio/sitemap.xml

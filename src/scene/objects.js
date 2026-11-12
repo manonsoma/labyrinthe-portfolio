@@ -37,7 +37,7 @@ export function createPawn(mats) {
     ...cubic([0.15, 0.467], [0.12, 0.472], [0.095, 0.48], [0.088, 0.5], 6),
     ...arc(0, 0.615, 0.13, -H + 0.72, H, 28),
   ];
-  const geo = roundLathe(prof, 128);
+  const geo = roundLathe(prof, 72);
   const body = new THREE.Mesh(geo, m.goldPolished);
   body.castShadow = true; body.receiveShadow = true;
   // feutrine sous le pion
@@ -128,8 +128,8 @@ export function createVases(maze, mats) {
   const body = smoothProfile([
     [0, 0], [0.13, 0], [0.15, 0.02], [0.12, 0.05], [0.1, 0.08], [0.16, 0.16], [0.21, 0.27], [0.215, 0.34],
     [0.19, 0.43], [0.13, 0.52], [0.09, 0.57], [0.085, 0.62], [0.11, 0.66], [0.125, 0.68], [0.115, 0.69], [0.07, 0.675], [0.0, 0.66],
-  ], 160);
-  const vaseGeo = lathe(body, 64);
+  ], 44);
+  const vaseGeo = lathe(body, 32);
   const ivory = [], gold = [], nero = [];
   const rand = mulberry32(77);
   for (const v of maze.vases) {
@@ -152,7 +152,7 @@ export function createVases(maze, mats) {
     }
     gold.push(place(new THREE.SphereGeometry(0.03 * s, 16, 12), x, by + 0.1 + 0.69 * s, z));
     for (const [ry0, rr] of [[0.27, 0.218], [0.62, 0.09], [0.66, 0.112]]) {
-      const t = new THREE.TorusGeometry(rr * s, 0.008, 8, 48); t.rotateX(Math.PI / 2);
+      const t = new THREE.TorusGeometry(rr * s, 0.008, 6, 32); t.rotateX(Math.PI / 2);
       gold.push(place(t, x, by + 0.1 + ry0 * s, z));
     }
   }
