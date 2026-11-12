@@ -249,14 +249,20 @@ export function createLanterns(pillarTops, mats) {
   const tops = pillarTops.filter((p) => p.lantern);
   const brass = [], glass = [];
   const y = PILLAR_TOP_Y;
+  // lanterne hexagonale : pied mouluré, verre, montants, dôme et anneau en laiton
+  const base = roundLathe([[0, 0], [0.12, 0], [0.12, 0.015], ...cubic([0.115, 0.02], [0.08, 0.025], [0.07, 0.04], [0.07, 0.05], 6), [0.1, 0.055], [0.1, 0.07], [0, 0.07]], 6);
+  const roof = roundLathe([[0, 0], [0.115, 0], [0.115, 0.012], ...cubic([0.11, 0.015], [0.1, 0.06], [0.04, 0.08], [0.025, 0.13], 10), ...arc(0.025, 0.145, 0.015, -Math.PI / 2, Math.PI / 2, 6), [0, 0.16]], 6);
+  const ring = new THREE.TorusGeometry(0.028, 0.006, 8, 20);
+  const glassG = new THREE.CylinderGeometry(0.088, 0.088, 0.2, 6, 1, true);
   for (const p of tops) {
-    brass.push(place(rbox(0.22, 0.04, 0.22, 0.012), p.x, y + 0.02, p.z));
-    for (const sx of [-1, 1]) for (const sz of [-1, 1])
-      brass.push(place(new THREE.CylinderGeometry(0.008, 0.008, 0.24, 8), p.x + sx * 0.085, y + 0.16, p.z + sz * 0.085));
-    const roof = new THREE.ConeGeometry(0.15, 0.1, 4); roof.rotateY(Math.PI / 4);
-    brass.push(place(roof, p.x, y + 0.33, p.z));
-    brass.push(place(new THREE.SphereGeometry(0.025, 12, 8), p.x, y + 0.4, p.z));
-    glass.push(place(new THREE.BoxGeometry(0.17, 0.23, 0.17), p.x, y + 0.16, p.z));
+    brass.push(place(base, p.x, y, p.z));
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2;
+      brass.push(place(new THREE.CylinderGeometry(0.007, 0.007, 0.205, 6), p.x + Math.cos(a) * 0.09, y + 0.07 + 0.1, p.z + Math.sin(a) * 0.09));
+    }
+    brass.push(place(roof, p.x, y + 0.27, p.z));
+    brass.push(place(ring, p.x, y + 0.45, p.z));
+    glass.push(place(glassG, p.x, y + 0.17, p.z));
   }
   const group = new THREE.Group();
   if (!tops.length) return { group, flames: null, positions: [] };
@@ -268,12 +274,12 @@ export function createLanterns(pillarTops, mats) {
   const positions = [];
   const dummy = new THREE.Object3D();
   tops.forEach((p, i) => {
-    dummy.position.set(p.x, y + 0.13, p.z); dummy.updateMatrix(); flames.setMatrixAt(i, dummy.matrix);
-    positions.push(new THREE.Vector3(p.x, y + 0.14, p.z));
+    dummy.position.set(p.x, y + 0.15, p.z); dummy.updateMatrix(); flames.setMatrixAt(i, dummy.matrix);
+    positions.push(new THREE.Vector3(p.x, y + 0.17, p.z));
   });
   group.add(flames);
   group.name = 'lanterns';
-  return { group, flames, positions, baseY: y + 0.13 };
+  return { group, flames, positions, baseY: y + 0.15 };
 }
 
 // ─── Poussière d'or sur les cases visitées ─────────────────
