@@ -121,7 +121,8 @@ async function init() {
       obj.userData.glow.material.opacity = open ? 0.35 : 0;
     });
     gate.userData.bars.position.y = game.gateOpen ? -gate.userData.travel : 0;
-    gate.userData.light.intensity = game.gateOpen ? 2.5 : 0;
+    gate.userData.light.intensity = game.gateOpen ? 3.2 : 0;
+    gate.userData.burst = false;
     hud.setCount(game.opened.length);
     game.placePawn();
     if (instant) rig.snap(pawn.position);
@@ -134,13 +135,15 @@ async function init() {
     coffretLight.position.set(wp.x, 0.55, wp.z);
     sound.chime();
     animate(1.4, (k) => {
-      const e = 1 - Math.pow(1 - k, 3);
+      // ouverture sur les charnières avec un léger rebond en fin de course
+      const e = k < 0.8 ? 1 - Math.pow(1 - k / 0.8, 3) : 1 + Math.sin(((k - 0.8) / 0.2) * Math.PI) * 0.035;
       obj.userData.lidPivot.rotation.x = -1.95 * e;
       obj.userData.glow.material.opacity = 0.9 * Math.min(1, k * 1.6);
       coffretLight.intensity = 3.2 * Math.sin(Math.min(1, k * 1.2) * Math.PI * 0.5);
       if (k > 0.35 && !obj.userData.burst) { obj.userData.burst = true; sparkles.burst(new THREE.Vector3(wp.x, 0.45, wp.z)); }
+      if (k > 0.8 && !obj.userData.thud) { obj.userData.thud = true; sound.thud(); }
     }, async () => {
-      obj.userData.burst = false;
+      obj.userData.burst = false; obj.userData.thud = false;
       hud.setCount(game.opened.length);
       hud.setBadge(true);
       await cardModal.show(order);
@@ -152,6 +155,7 @@ async function init() {
   function openGate() {
     hud.toast(content.messages.gateOpen, 5000);
     sound.melody();
+    sound.rumble(4.2);
     const bars = gate.userData.bars, light = gate.userData.light, travel = gate.userData.travel;
     const prevMode = rig.mode;
     rig.setMode('follow');
@@ -161,7 +165,9 @@ async function init() {
     animate(4.2, (k) => {
       const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
       bars.position.y = -travel * e;
-      light.intensity = 2.5 * Math.min(1, k * 1.5);
+      bars.position.x = k < 0.9 && !reducedMotion ? Math.sin(k * 160) * 0.003 * (1 - k) : 0;
+      light.intensity = 3.2 * Math.min(1, k * 1.5);
+      if (k > 0.15 && !gate.userData.burst) { gate.userData.burst = true; sparkles.burst(new THREE.Vector3(gate.position.x, 0.4, gate.position.z - 0.3)); }
     }, () => { rig.lookOverride = null; rig.setMode(prevMode); game.paused = false; });
   }
 
@@ -189,7 +195,7 @@ async function init() {
 
   const hud = createHud(app, {
     onNotebook: () => { hud.setBadge(false); notebook.open(game.opened.length); },
-    onView: () => { const board = rig.mode !== 'board'; rig.setMode(board ? 'board' : 'follow'); hud.setView(board); },
+    onView: () => { const board = rig.mode !== 'board'; rig.setMode(board ? 'board' : 'follow'); hud.setView(board); postfx.setBoardView(board); },
     onSound: () => { sound.unlock(); sound.setEnabled(!sound.enabled); hud.setSound(sound.enabled); if (sound.enabled && ambienceWanted) sound.setAmbience(true); },
     onAmbience: (on) => { ambienceWanted = on; sound.unlock(); sound.setAmbience(on); hud.setAmbience(on); },
     onQuality: (q) => setQuality(q, true),

@@ -335,7 +335,7 @@ export function createSparkles(count = 160) {
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(count * 3), vel = new Float32Array(count * 3), life = new Float32Array(count);
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const mat = new THREE.PointsMaterial({ map: dot(), color: 0xffd98a, size: 0.07, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 1 });
+  const mat = new THREE.PointsMaterial({ map: dot(), color: new THREE.Color(2.4, 1.8, 0.8), size: 0.07, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 1 });
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false; points.visible = false;
   let t = 0;

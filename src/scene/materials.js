@@ -140,8 +140,9 @@ export async function createMaterials(renderer, { quality = 'high', onProgress }
   if (leafTex) leafTex.colorSpace = THREE.SRGBColorSpace;
   m.leaf = new THREE.MeshStandardMaterial({ map: leafTex, color: leafTex ? 0xffffff : 0x4c8236, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.55, emissive: new THREE.Color('#0b2412'), emissiveIntensity: 1 });
   m.glass = new THREE.MeshPhysicalMaterial({ color: new THREE.Color('#fff4dc'), roughness: 0.05, metalness: 0, transparent: true, opacity: 0.28, clearcoat: 1, depthWrite: false });
-  m.flame = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffc46b') });
-  m.glowInner = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd27a'), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  // couleurs « HDR » (> 1) : seules ces sources et les reflets de l'or déclenchent la lueur (bloom)
+  m.flame = new THREE.MeshBasicMaterial({ color: linear(4.2, 2.3, 0.75) });
+  m.glowInner = new THREE.MeshBasicMaterial({ color: linear(2.6, 1.7, 0.6), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
 
   return { m, tex, repeat: Object.fromEntries(names.map((n) => [n, TEXTURE_SETS[n].repeat])), usingPhotos };
 }

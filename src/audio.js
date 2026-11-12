@@ -99,6 +99,32 @@ export class Sound {
     [293.7, 440, 587.3].forEach((f) => this.bell(f, t + 1.6, 4.5, 0.05));
   }
 
+  /** « Toc » sourd du couvercle en bois laqué qui arrive en butée. */
+  thud() {
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.12);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    o.connect(g).connect(this.out(1, 0.3)); o.start(t); o.stop(t + 0.2);
+  }
+
+  /** Grondement doux de la grille qui descend dans le sol. */
+  rumble(duration = 4) {
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const len = ctx.sampleRate * duration;
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) { last = last * 0.995 + (Math.random() * 2 - 1) * 0.005; d[i] = last * 6; }
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.22, t + 0.6);
+    g.gain.setValueAtTime(0.22, t + duration - 1); g.gain.linearRampToValueAtTime(0, t + duration);
+    src.connect(lp).connect(g).connect(this.out(1, 0.4)); src.start(t);
+  }
+
   setAmbience(on) {
     this.ambience = on;
     if (!this.ctx) this.unlock();
